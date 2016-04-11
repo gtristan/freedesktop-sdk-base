@@ -1,9 +1,22 @@
+#
+# Usage:
+#
+#   make ARCH=i686 VERSION=1.6
+#
+# ARCH:    The machine architecture you want to build for
+# VERSION: The version (branch) of runtime and sdk to produce
+#
+ifndef ARCH
+$(error ARCH is not set)
+endif
+
+ifndef VERSION
+$(error VERSION is not set)
+endif
+
 srcdir = $(CURDIR)
 builddir = $(CURDIR)
-
 NULL=
-ARCH=x86_64
-VERSION=1.5
 HASH:=$(shell git rev-parse HEAD)
 IMAGEDIR=images/${ARCH}
 SDK_IMAGE=${IMAGEDIR}/freedesktop-contents-sdk-${ARCH}-${HASH}.tar.gz
@@ -50,3 +63,14 @@ ${FILE_REF_PLATFORM}: metadata.platform ${PLATFORM_IMAGE}
 	ostree commit ${COMMIT_ARGS} ${GPG_ARGS} --branch=${REF_PLATFORM}  -s "build of ${HASH}" platform
 	ostree summary -u --repo=repo ${GPG_ARGS}
 	rm -rf platform
+
+METADATA_FILES=metadata.sdk metadata.platform
+${METADATA_FILES}: metadata_FORCE
+
+%:%.in
+	sed -e 's/@@ARCH@@/${ARCH}/g' \
+	    -e 's/@@VERSION@@/${VERSION}/g' \
+	    $< > $@.tmp && mv $@.tmp $@ || exit 1
+
+# force the files to be rebuilt every make invocation
+metadata_FORCE:
